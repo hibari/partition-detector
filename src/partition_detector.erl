@@ -26,8 +26,8 @@
 -export([start_phase/3, prep_stop/1, config_change/3]).
 
 
--spec start() -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
--spec start(_,_) -> {ok, pid()} | {ok, pid(), any()} | {error, any()}.
+-spec start() -> {ok, pid()} | {error, any()}.
+-spec start(_,_) -> {ok, pid()} | {error, any()}.
 -spec start_phase(_,_,_) -> 'ok'.
 -spec prep_stop(_) -> any().
 -spec config_change(_,_,_) -> 'ok'.
