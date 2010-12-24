@@ -22,7 +22,7 @@
 -behaviour(gen_server).
 
 -include("partition_detector.hrl").
--include("applog.hrl").
+-include("gmt_elog.hrl").
 
 %% External exports
 -export([start_link/1, get_state/0,
@@ -121,29 +121,27 @@ handle_info({mnesia_system_event, {mnesia_overload, _Details}}, State) ->
 handle_info({mnesia_system_event,
              {inconsistent_database, Reason, NodeInfo}},
             State) ->
-    ?APPLOG_ALERT_MODULE("NETWORK_MONITOR", ?APPLOG_APPM_001,
-                         "Mnesia partitioned network error, reason = ~p, "
-                         "node info = ~p, aborting!", [Reason, NodeInfo]),
-    %% Grrrrr.  We don't want to wait any longer, Mnesia is already hosed.
-    %% But it would be really very helpful to have the above app log message
-    %% get scribbled to disk so we know why we shut ourselves down....
+    ?ELOG_ERROR("Mnesia partitioned network error, reason = ~p, "
+                "node info = ~p, aborting!",
+                [Reason, NodeInfo]),
+    %% Grrrrr.  We don't want to wait any longer, Mnesia is already
+    %% hosed.  But it would be really very helpful to have the above
+    %% app log message get scribbled to disk so we know why we shut
+    %% ourselves down....
     timer:sleep(1),
     partition_detector_server:exec_emergency_shutdown_fun({?MODULE, self()}),
     {noreply, State};
 handle_info({mnesia_system_event, Event}, State) ->
     case Event of
         {mnesia_up, NodeUp} ->
-            ?APPLOG_WARNING_MODULE("MNESIA", ?APPLOG_APPM_013,
-                                   "Mnesia system event: node up: ~p",
-                                   [NodeUp]);
+            ?ELOG_WARNING("Mnesia system event: node up: ~p",
+                          [NodeUp]);
         {mnesia_down, NodeDown} ->
-            ?APPLOG_WARNING_MODULE("MNESIA", ?APPLOG_APPM_014,
-                                   "Mnesia system event: node down: ~p",
-                                   [NodeDown]);
+            ?ELOG_WARNING("Mnesia system event: node down: ~p",
+                          [NodeDown]);
         Event ->
-            ?APPLOG_WARNING_MODULE("MNESIA", ?APPLOG_APPM_011,
-                                   "Mnesia system event: ~P",
-                                   [Event, ?FORMAT_MAXDEPTH])
+            ?ELOG_ERROR("Mnesia system event: ~p",
+                        [Event])
     end,
     {noreply, State};
 handle_info(_Info, State) ->

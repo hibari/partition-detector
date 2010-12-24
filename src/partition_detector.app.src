@@ -30,6 +30,18 @@
              , partition_detector_mnesia
              , partition_detector_server
              , partition_detector_sup
-            ]}
- ]
-}.
+            ]},
+  {env, [{heartbeat_beacon_interval, 1000}
+         , {heartbeat_failure_interval, 15}
+         , {heartbeat_status_udp_port, 63099}
+         , {heartbeat_status_xmit_udp_port, 63100}
+         , {heartbeat_warning_interval, 5}
+         , {network_a_address, ""}
+         , {network_a_broadcast_address, ""}
+         , {network_a_tiebreaker, ""}
+         , {network_b_address, ""}
+         , {network_b_broadcast_address, ""}
+         , {network_monitor_enable, false}
+         , {network_monitor_monitored_nodes, []}
+        ]}
+ ]}.

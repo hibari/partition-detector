@@ -45,7 +45,7 @@
 %%          {error, Reason}
 %%----------------------------------------------------------------------
 start() ->
-    start(xxxwhocares, []).
+    start(normal, []).
 
 start(_Type, StartArgs) ->
     io:format("DEBUG: ~s: application:start_type() = ~p\n",
@@ -84,7 +84,6 @@ config_change(_Changed, _New, _Removed) ->
 %%----------------------------------------------------------------------
 stop(_State) ->
     io:format("DEBUG: ~s:stop(~p)\n", [?MODULE, _State]),
-    %% gmt_event_h:delete_report_handler(),
     ok.
 
 %%%----------------------------------------------------------------------

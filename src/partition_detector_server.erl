@@ -22,7 +22,7 @@
 -behaviour(gen_server).
 
 -include("partition_detector.hrl").
--include("applog.hrl").
+-include("gmt_elog.hrl").
 
 -define(UDP_PORT_STATUS, 63099).
 -define(UDP_PORT_STATUS_XMIT, 63100).      % Actual port may be higher
@@ -143,27 +143,21 @@ init(ArgList) ->
     EmergencyShutdownFun =
         case proplists:get_value(shutdown_modfunc, ArgList) of
             undefined ->
-                %% error_logger:warning_msg("QQQ: undefined in ArgList ~p, using default\n", [ArgList]), timer:sleep(3000),
                 fun async_shutdown_everything/0;
             {Mod, Func} ->
                 fun() ->
-                        ?APPLOG_ALERT_MODULE("NETWORK_MONITOR",
-                                             ?APPLOG_APPM_009, "~p:~p/0",
-                                             [Mod, Func]),
+                        ?ELOG_ERROR("~p:~p/0", [Mod, Func]),
                         Mod:Func() end
         end,
     ExtraList = proplists:get_value(extra_list, ArgList, []),
 
     erlang:process_flag(priority, high),
 
-    case gmt_config_svr:get_config_value('network_monitor_enable', "false") of
-        {ok, "true"} ->
-            {ok, UdpPort} =
-                gmt_config_svr:get_config_value_i(heartbeat_status_udp_port,
-                                                  ?UDP_PORT_STATUS),
-            {ok, UdpPortXmit} =
-                gmt_config_svr:get_config_value_i(heartbeat_status_xmit_udp_port,
-                                                  ?UDP_PORT_STATUS_XMIT),
+    case application:get_env(partition_detector, network_monitor_enable) of
+        {ok, true} ->
+            {ok, UdpPort} = application:get_env(partition_detector, heartbeat_status_udp_port),
+            {ok, UdpPortXmit} = application:get_env(partition_detector, heartbeat_status_xmit_udp_port),
+
             BPidA = spawn_link(?MODULE, do_beacon,
                                ['A', 'network_a_address',
                                 'network_a_broadcast_address',
@@ -175,10 +169,8 @@ init(ArgList) ->
                                 EmergencyShutdownFun,
                                 UdpPort, UdpPortXmit, []]),
 
-            {ok, HeartWarn} = gmt_config_svr:get_config_value_i(
-                                heartbeat_warning_interval, 5),
-            {ok, HeartFail} = gmt_config_svr:get_config_value_i(
-                                heartbeat_failure_interval, 15),
+            {ok, HeartWarn} = application:get_env(partition_detector, heartbeat_warning_interval),
+            {ok, HeartFail} = application:get_env(partition_detector, heartbeat_failure_interval),
 
             {ok, TRef} = timer:send_interval(1000, {check_status}),
             %% DEBUGGING USE ONLY!
@@ -213,22 +205,21 @@ init(ArgList) ->
             %% Intentionally only match the 2 cases that we care about.
             case open_udp_listen_port(UdpPort) of
                 {ok, Sock} ->
-                    ?APPLOG_INFO_MODULE("NETWORK_MONITOR", ?APPLOG_INFO_003,
-                                        "Partition detector: active status "
-                                        "on node ~p", [node()]),
+                    ?ELOG_INFO("Partition detector: active status "
+                               "on node ~p",
+                               [node()]),
                     {ok, S#state{monitor_p = true,
                                  mon_sock = Sock}};
                 {error, eaddrinuse} ->
-                    ?APPLOG_INFO_MODULE("NETWORK_MONITOR", ?APPLOG_INFO_004,
-                                        "Partition detector: standby status "
-                                        "on node ~p", [node()]),
+                    ?ELOG_INFO("Partition detector: standby status "
+                               "on node ~p",
+                               [node()]),
                     {ok, S#state{monitor_p = false,
                                  mon_sock = undefined}}
             end;
         _ ->
             %% Defaults are OK for no monitoring
-            ?APPLOG_WARNING_MODULE_NOARGS("NETWORK_MONITOR", ?APPLOG_APPM_010,
-                                          "Network monitor is not enabled"),
+            ?ELOG_WARNING("Network monitor is not enabled"),
             {ok, #state{}}
     end.
 
@@ -242,12 +233,10 @@ init(ArgList) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 handle_call({set_emergency_shutdown_fun, Fun}, _From, State) ->
-    ?APPLOG_INFO_MODULE("NETWORK_MONITOR", ?APPLOG_INFO_002,
-                        "New emergency shutdown fun: ~p", [Fun]),
+    ?ELOG_INFO("New emergency shutdown fun: ~p", [Fun]),
     {reply, ok, State#state{emergency_shutdown_fun = Fun}};
 handle_call({exec_emergency_shutdown_fun, Who}, _From, State) ->
-    ?APPLOG_INFO_MODULE("NETWORK_MONITOR", ?APPLOG_INFO_006,
-                        "Exec emergency shutdown fun: called by ~p", [Who]),
+    ?ELOG_INFO("Exec emergency shutdown fun: called by ~p", [Who]),
     _ = (State#state.emergency_shutdown_fun)(),
     {reply, ok, State};
 handle_call({add_to_beacon_extra, Term}, _From, State) ->
@@ -327,9 +316,9 @@ handle_info({check_status}, State) when State#state.monitor_p =:= true ->
 handle_info({check_status}, State) when State#state.monitor_p =:= false ->
     case open_udp_listen_port(State#state.udp_port) of
         {ok, Sock} ->
-            ?APPLOG_INFO_MODULE("NETWORK_MONITOR", ?APPLOG_INFO_005,
-                                "Partition detector: change active status on "
-                                "node ~p", [node()]),
+            ?ELOG_INFO("Partition detector: change active status on "
+                       "node ~p",
+                       [node()]),
             gen_udp:close(Sock),
             ArgList =
                 [{extra_list, State#state.extra_list}|State#state.arglist],
@@ -374,8 +363,7 @@ code_change(_OldVsn, State, _Extra) ->
 do_beacon(NetAbbr, AddrKnob, BcastKnob, EmergencyShutdownFun,
           UdpPort, UdpPortXmit, BeaconExtras) ->
     erlang:process_flag(priority, high),
-    {ok, BeaconInterval} = gmt_config_svr:get_config_value_i(
-                             heartbeat_beacon_interval, 1000),
+    {ok, BeaconInterval} = application:get_env(partition_detector, heartbeat_beacon_interval),
 
     MyAddr = get_ip_from_config(AddrKnob),
     BcastAddr = get_ip_from_config(BcastKnob),
@@ -403,8 +391,7 @@ beacon_loop(Sock, NetAbbr, Count, BcastAddr, EmergencyShutdownFun,
             %% "nc -u host port < /etc/termcap".
             case catch unpack_beacon(FromData) of
                 B when is_record(B, beacon) ->
-                    ?APPLOG_INFO_MODULE("NETWORK_MONITOR", ?APPLOG_INFO_001,
-                                        "Received UDP unicast beacon: ~p", [B]),
+                    ?ELOG_INFO("Received UDP unicast beacon: ~p", [B]),
                     process_unicast_beacon(FromAddr, FromPort, B,
                                            EmergencyShutdownFun);
                 _ ->
@@ -425,20 +412,18 @@ beacon_loop(Sock, NetAbbr, Count, BcastAddr, EmergencyShutdownFun,
 %% @spec (Knob::atom()) -> ip_addr() | error | exit()
 
 get_ip_from_config(Knob) ->
-    case gmt_config_svr:get_config_value(Knob, "") of
+    case application:get_env(partition_detector, Knob) of
         {ok,""} ->
-            ?APPLOG_WARNING_MODULE("NETWORK_MONITOR", ?APPLOG_CONF_001,
-                                   "No configuration info available for ~p",
-                                   [Knob]),
+            ?ELOG_WARNING("No configuration info available for ~p", [Knob]),
             error;
         {ok,V} ->
             case inet:getaddr(V, inet) of
                 {ok, IP} ->
                     IP;
                 {error, Reason} ->
-                    ?APPLOG_WARNING_MODULE("NETWORK_MONITOR", ?APPLOG_CONF_002,
-                                           "Invalid configuration value for "
-                                           "~p: ~p", [Knob, Reason]),
+                    ?ELOG_WARNING("Invalid configuration value for "
+                                  "~p: ~p",
+                                  [Knob, Reason]),
                     exit({bad_config_value, Knob, V, Reason})
             end
     end.
@@ -446,13 +431,8 @@ get_ip_from_config(Knob) ->
 %% @spec () -> list(atom())
 
 get_monitored_nodes() ->
-    case gmt_config_svr:get_config_value(network_monitor_monitored_nodes,"") of
-        {ok, ""} ->
-            [];
-        {ok, S} ->
-            Toks = string:tokens(S, ","),
-            [list_to_atom(string:strip(T)) || T <- Toks]
-    end.
+    {ok, Nodes} = application:get_env(partition_detector, network_monitor_monitored_nodes),
+    Nodes.
 
 open_udp_listen_port(UdpPort) ->
     gen_udp:open(UdpPort, [binary, {broadcast, true},
@@ -466,9 +446,8 @@ open_a_udp_sock(PortNum, MyAddr) ->
         {error, eaddrinuse} ->
             open_a_udp_sock(PortNum + 1, MyAddr);
         {error, Reason} ->
-            ?APPLOG_WARNING_MODULE("NETWORK_MONITOR", ?APPLOG_NETW_001,
-                                   "Error opening UDP port ~p on ~p: ~p",
-                                   [PortNum, MyAddr, Reason]),
+            ?ELOG_WARNING("Error opening UDP port ~p on ~p: ~p",
+                          [PortNum, MyAddr, Reason]),
             exit({udp_open_error, PortNum, Reason})
     end.
 
@@ -523,26 +502,6 @@ do_check_status(S) ->
     OnlyBBad = [N || N <- BadNetB, not lists:member(N, BadNetA)] -- BothBad,
     %%io:format("QQQ: Both ~p, OnlyA ~p, OnlyB ~p\n", [BothBad, OnlyABad, OnlyBBad]),
 
-    Debug = {ok, true}, %%QQQ application:get_env(pss, netmon_debug),
-    if Debug =:= {ok, true},
-       {S#state.last_bothbad, S#state.last_onlyabad, S#state.last_onlybbad} /=
-       {BothBad, OnlyABad, OnlyBBad} ->
-            ?APPLOG_DEBUG_MODULE("NETWORK_MONITOR", "Netmon ~s", ["CHANGE ==================="]),
-            ?APPLOG_DEBUG_MODULE("NETWORK_MONITOR", "BadNetA:  ~p", [BadNetA]),
-            ?APPLOG_DEBUG_MODULE("NETWORK_MONITOR", "BadNetB:  ~p", [BadNetB]),
-            if BothBad =/= [] ->
-                    ?APPLOG_DEBUG_MODULE("NETWORK_MONITOR", "BothBad:  ~p", [BothBad]);
-               true -> ok end,
-            if OnlyABad =/= [] ->
-                    ?APPLOG_DEBUG_MODULE("NETWORK_MONITOR", "OnlyABad: ~p", [OnlyABad]);
-               true -> ok end,
-            if OnlyBBad =/= [] ->
-                    ?APPLOG_DEBUG_MODULE("NETWORK_MONITOR", "OnlyBBad: ~p", [OnlyBBad]);
-               true -> ok
-            end;
-       true -> ok %% ?APPLOG_DEBUG_MODULE("NETWORK_MONITOR", "Netmon ~s", ["none"])
-    end,
-
     clear_alarms(S#state.last_bothbad, BothBad, 'A'),
     clear_alarms(S#state.last_bothbad, BothBad, 'B'),
     clear_alarms(S#state.last_onlyabad, OnlyABad, 'A'),
@@ -577,29 +536,24 @@ do_check_failure(S) ->
                     {BSecs, {value, HA}} ->
                         case timer:now_diff(Now, HA#history.lasttime) of
                             Diff when Diff > HeartFailUsec,
-                            BSecs =/= 'Never' ->
+                                      BSecs =/= 'Never' ->
                                 %% Definitely a partition!
-                                ?APPLOG_ALERT_MODULE("NETWORK_MONITOR", ?APPLOG_APPM_002,
-                                                     "Network 'A' is partitioned.  Heartbeats from ~p on network 'A' are lost (~p seconds) but are functioning normally on network 'B' (last heard ~p seconds ago)",
-                                                     [N, Diff/1000000, BSecs]),
-                                {ok,Addr} = gmt_config_svr:get_config_value(
-                                              network_a_tiebreaker, ""),
+                                ?ELOG_ERROR("Network 'A' is partitioned.  Heartbeats from ~p on network 'A' are lost (~p seconds) but are functioning normally on network 'B' (last heard ~p seconds ago)",
+                                            [N, Diff/1000000, BSecs]),
+                                {ok,Addr} = application:get_env(partition_detector, network_a_tiebreaker),
                                 case do_ping_p(Addr) of
                                     true  ->
-                                        ?APPLOG_ALERT_MODULE("NETWORK_MONITOR", ?APPLOG_APPM_004,
-                                                             "Network 'A' is partitioned.  Able to successfully ping ~s. Continuing operation.",
-                                                             [Addr]);
+                                        ?ELOG_ERROR("Network 'A' is partitioned.  Able to successfully ping ~s. Continuing operation.",
+                                                    [Addr]);
                                     false ->
-                                        ?APPLOG_ALERT_MODULE("NETWORK_MONITOR", ?APPLOG_APPM_003,
-                                                             "Network 'A' is partitioned.  Unable to ping ~s.  Starting emergency shutdown to prevent database damage.",
-                                                             [Addr]),
+                                        ?ELOG_ERROR("Network 'A' is partitioned.  Unable to ping ~s.  Starting emergency shutdown to prevent database damage.",
+                                                    [Addr]),
                                         (S#state.emergency_shutdown_fun)()
                                 end;
                             Diff ->
                                 %% Partition is possible, wait and see...
-                                ?APPLOG_WARNING_MODULE("NETWORK_MONITOR", ?APPLOG_APPM_012,
-                                                       "Partition of network 'A' is possible.  Heartbeats from ~p on network 'A' are lost (~p seconds) but are functioning normally on network 'B' (last heard ~p seconds ago)",
-                                                       [N, Diff/1000000, BSecs])
+                                ?ELOG_WARNING("Partition of network 'A' is possible.  Heartbeats from ~p on network 'A' are lost (~p seconds) but are functioning normally on network 'B' (last heard ~p seconds ago)",
+                                              [N, Diff/1000000, BSecs])
                         end;
                     {BSecs, false} ->
                         %% In this case, we've never seen a heartbeat on
@@ -661,8 +615,7 @@ process_unicast_beacon(FromAddr, FromPort, B, EmergencyShutdownFun) ->
     gen_event:notify(?EVENT_SERVER, {beacon_event, FromAddr, FromPort, B}),
     case lists:member(halt_immediately, B#beacon.extra) of
         true ->
-            ?APPLOG_ALERT_MODULE("NETWORK_MONITOR", ?APPLOG_APPM_005,
-                                 "Shutdown beacon received: ~p", [B]),
+            ?ELOG_ERROR("Shutdown beacon received: ~p", [B]),
             EmergencyShutdownFun();
         _ ->
             ok
@@ -670,21 +623,18 @@ process_unicast_beacon(FromAddr, FromPort, B, EmergencyShutdownFun) ->
 
 alarm_log_set_fun(Name) ->                      % Yes, returning an arity 0 fun
     fun() ->
-            ?APPLOG_ALERT_MODULE("NETWORK_MONITOR", ?APPLOG_APPM_006,
-                                 "Alarm SET: network_heartbeat: ~p", [Name])
+            ?ELOG_ERROR("Alarm SET: network_heartbeat: ~p", [Name])
     end.
 
 alarm_log_clear_fun(Name) ->                    % Yes, returning an arity 0 fun
     fun() ->
-            ?APPLOG_ALERT_MODULE("NETWORK_MONITOR", ?APPLOG_APPM_007,
-                                 "Alarm CLEAR: network_heartbeat: ~p", [Name])
+            ?ELOG_ERROR("Alarm CLEAR: network_heartbeat: ~p", [Name])
     end.
 
 async_shutdown_everything() ->
     %% Not clear if this would be written to the app log before the
     %% halt interferes with the writing.
-    ?APPLOG_ALERT_MODULE("NETWORK_MONITOR", ?APPLOG_APPM_008,
-                         "Async shutdown function in ~s called", [?MODULE]),
+    ?ELOG_ERROR("Async shutdown function in ~s called", [?MODULE]),
     spawn_opt(fun() -> process_flag(trap_exit, true),
                        erlang:halt(0),
                        ok

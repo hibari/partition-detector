@@ -21,8 +21,6 @@
 
 -behaviour(supervisor).
 
--include("applog.hrl").
-
 %% API
 -export([start_link/1]).
 
@@ -62,8 +60,6 @@ init(ArgList) ->
     %% Hint:
     %% Child_spec = [Name, {M, F, A},
     %%               Restart, Shutdown_time, Type, Modules_used]
-
-    %% error_logger:warning_msg("sup init QQQ: ArgList ~p\n", [ArgList]), timer:sleep(3000),
 
     Detector =
         {partition_detector_server, {partition_detector_server, start_link,
