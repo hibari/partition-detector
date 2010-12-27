@@ -31,23 +31,20 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-record(state, {
+         }).
 
 -spec start_link(_) -> {ok, pid()} | {error, any()}.
 -spec get_state() -> any().
 -spec get_mnesia_monitored_nodes() -> any().
 -spec get_mnesia_monitored_nodes(_,_) -> any().
 %% 99% (100%?) boilerplate for gen_server callbacks?
--spec init(_) -> {ok, any()} | {ok, any(), timeout()} | ignore | {stop, any()}.
--spec handle_call(_,_,_) -> {reply, any(), any()} | {reply, any(), any(), timeout()} | {noreply, any()} | {noreply, any(), timeout} | {stop, any(), any(), any()} | {stop, any(), any()}.
--spec handle_cast(_,_) -> {noreply, any()} | {noreply, any(), timeout} | {stop, any(), any()}.
--spec handle_info(_,_) -> {noreply, any()} | {noreply, any(), timeout} | {stop, any(), any()}.
+-spec init(_) -> {ok, #state{}}.
+-spec handle_call(_,_,_) -> {reply, any(), #state{}}.
+-spec handle_cast(_,_) -> {noreply, #state{}}.
+-spec handle_info(_,_) -> {noreply, #state{}}.
 -spec terminate(_,_) -> any().
 -spec code_change(_,_,_) -> {ok, any()}.
-
-
--record(state, {
-
-         }).
 
 %%%----------------------------------------------------------------------
 %%% API

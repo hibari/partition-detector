@@ -44,35 +44,6 @@
 %% Debugging exports
 -export([send_fake_admin_beacon/0, send_fake_admin_beacon/1]).
 
-
-%% NOTE: Only exported funcs are included so far....
-
--type a_or_b() :: 'A' | 'B'.
--type broadcast_addr() :: atom() | string() | {byte(),byte(),byte(),byte()} | {char(),char(),char(),char(),char(),char(),char(),char()}. % inferred from gen_udp:send(), I think
-
--spec add_to_beacon_extra(_) -> ok.
--spec beacon_loop(port(), a_or_b(), number(), broadcast_addr(), fun(), 'infinity' | non_neg_integer(), integer(), list()) -> any().
--spec code_change(_,_,_) -> {ok, any()}.
--spec del_from_beacon_extra(_) -> ok.
--spec do_beacon(a_or_b(), 'network_a_address' | 'network_b_address','network_a_broadcast_address' | 'network_b_broadcast_address', fun(), integer(), integer(), list()) -> any().
--spec exec_emergency_shutdown_fun(_) -> ok.
--spec get_last_beacons() -> list().
--spec get_state() -> any().
--spec handle_call(_,_,_) -> {reply, any(), any()} | {reply, any(), any(), timeout()} | {noreply, any()} | {noreply, any(), timeout} | {stop, any(), any(), any()} | {stop, any(), any()}.
--spec handle_cast(_,_) -> {noreply, any()} | {noreply, any(), timeout} | {stop, any(), any()}.
--spec handle_info(_,_) -> {noreply, any()} | {noreply, any(), timeout} | {stop, any(), any()}.
--spec init(_) -> {ok, any()} | {ok, any(), timeout()} | ignore | {stop, any()}.
--spec is_active() -> boolean().
--spec replace_beacon_extra(_,_) -> boolean().
--spec send_fake_admin_beacon() -> 'ok'.
--spec send_fake_admin_beacon(broadcast_addr()) -> 'ok'.
--spec set_emergency_shutdown_fun(fun(() -> any())) -> any().
--spec start_link(_) -> any().
--spec stop() -> ok.
--spec terminate(_,_) -> any().
-
-
-
 -record(state, {
           arglist,                              % term()
           heart_warn,                           % Seconds for heartbeat warning
@@ -94,6 +65,34 @@
           udp_port,                             % Config var
           udp_port_xmit                         % Config var
          }).
+
+
+%% NOTE: Only exported funcs are included so far....
+
+-type a_or_b() :: 'A' | 'B'.
+-type broadcast_addr() :: atom() | string() | {byte(),byte(),byte(),byte()} | {char(),char(),char(),char(),char(),char(),char(),char()}. % inferred from gen_udp:send(), I think
+
+-spec add_to_beacon_extra(_) -> ok.
+-spec beacon_loop(port(), a_or_b(), number(), broadcast_addr(), fun(), 'infinity' | non_neg_integer(), integer(), list()) -> any().
+-spec code_change(_,_,_) -> {ok, any()}.
+-spec del_from_beacon_extra(_) -> ok.
+-spec do_beacon(a_or_b(), 'network_a_address' | 'network_b_address','network_a_broadcast_address' | 'network_b_broadcast_address', fun(), integer(), integer(), list()) -> any().
+-spec exec_emergency_shutdown_fun(_) -> ok.
+-spec get_last_beacons() -> list().
+-spec get_state() -> any().
+-spec handle_call(_,_,_) -> {reply, any(), #state{}} | {stop, any(), any(), #state{}}.
+-spec handle_cast(_,_) -> {noreply, #state{}}.
+-spec handle_info(_,_) -> {noreply, #state{}} | {stop, any(), #state{}}.
+-spec init(_) -> {ok, #state{}}.
+-spec is_active() -> boolean().
+-spec replace_beacon_extra(_,_) -> boolean().
+-spec send_fake_admin_beacon() -> 'ok'.
+-spec send_fake_admin_beacon(broadcast_addr()) -> 'ok'.
+-spec set_emergency_shutdown_fun(fun(() -> any())) -> any().
+-spec start_link(_) -> any().
+-spec stop() -> ok.
+-spec terminate(_,_) -> any().
+
 
 %%%----------------------------------------------------------------------
 %%% API
@@ -636,8 +635,7 @@ async_shutdown_everything() ->
     %% halt interferes with the writing.
     ?ELOG_ERROR("Async shutdown function in ~s called", [?MODULE]),
     spawn_opt(fun() -> process_flag(trap_exit, true),
-                       erlang:halt(0),
-                       ok
+                       erlang:halt(0)
               end, [{priority, high}]).
 
 send_fake_admin_beacon() ->

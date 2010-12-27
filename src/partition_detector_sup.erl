@@ -29,7 +29,7 @@
 
 
 -spec start_link(_) -> {ok, pid()} | ignore | {error, any()}.
--spec init(_) -> {ok, any()} | ignore | {error, any()}.
+-spec init(_) -> {ok, any()}.
 
 
 -define(SERVER, ?MODULE).
