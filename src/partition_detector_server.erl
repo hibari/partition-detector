@@ -327,7 +327,6 @@ handle_info({check_status}, State) when State#state.monitor_p =:= false ->
             {noreply, State}
     end;
 handle_info(_Info, State) ->
-    io:format("DEBUG: info = ~p\n", [_Info]),
     {noreply, State}.
 
 %%----------------------------------------------------------------------
