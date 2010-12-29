@@ -32,10 +32,10 @@
              , partition_detector_sup
             ]},
   {env, [{heartbeat_beacon_interval, 1000}
-         , {heartbeat_failure_interval, 15}
+         , {heartbeat_failure_interval, 10000}
          , {heartbeat_status_udp_port, 63099}
          , {heartbeat_status_xmit_udp_port, 63100}
-         , {heartbeat_warning_interval, 5}
+         , {heartbeat_warning_interval, 5000}
          , {network_a_address, ""}
          , {network_a_broadcast_address, ""}
          , {network_a_tiebreaker, ""}
