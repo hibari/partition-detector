@@ -338,8 +338,8 @@ terminate(_Reason, _State) ->
     As = gmt_util:get_alarms(),
     MyAs = [Name
             || {{alarm_network_heartbeat, _} = Name, warning} <- As],
-    [gmt_util:clear_alarm(A, alarm_log_clear_fun(NetAbbr)) ||
-        {alarm_network_heartbeat, NetAbbr} = A <- MyAs],
+    _ = [gmt_util:clear_alarm(A, alarm_log_clear_fun(NetAbbr)) ||
+            {alarm_network_heartbeat, NetAbbr} = A <- MyAs],
     %% Everything else will clean up automatically when we exit.
     ok.
 
@@ -500,14 +500,14 @@ do_check_status(S) ->
     OnlyBBad = [N || N <- BadNetB, not lists:member(N, BadNetA)] -- BothBad,
     %%io:format("QQQ: Both ~p, OnlyA ~p, OnlyB ~p\n", [BothBad, OnlyABad, OnlyBBad]),
 
-    clear_alarms(S#state.last_bothbad, BothBad, 'A'),
-    clear_alarms(S#state.last_bothbad, BothBad, 'B'),
-    clear_alarms(S#state.last_onlyabad, OnlyABad, 'A'),
-    clear_alarms(S#state.last_onlybbad, OnlyBBad, 'B'),
-    set_alarms(S#state.last_bothbad, BothBad, 'A'),
-    set_alarms(S#state.last_bothbad, BothBad, 'B'),
-    set_alarms(S#state.last_onlyabad, OnlyABad, 'A'),
-    set_alarms(S#state.last_onlybbad, OnlyBBad, 'B'),
+    _ = clear_alarms(S#state.last_bothbad, BothBad, 'A'),
+    _ = clear_alarms(S#state.last_bothbad, BothBad, 'B'),
+    _ = clear_alarms(S#state.last_onlyabad, OnlyABad, 'A'),
+    _ = clear_alarms(S#state.last_onlybbad, OnlyBBad, 'B'),
+    _ = set_alarms(S#state.last_bothbad, BothBad, 'A'),
+    _ = set_alarms(S#state.last_bothbad, BothBad, 'B'),
+    _ = set_alarms(S#state.last_onlyabad, OnlyABad, 'A'),
+    _ = set_alarms(S#state.last_onlybbad, OnlyBBad, 'B'),
 
     S#state{last_bothbad = BothBad,
             last_onlyabad = OnlyABad, last_onlybbad = OnlyBBad}.
@@ -646,5 +646,5 @@ send_fake_admin_beacon(BroadcastAddr) ->
     %% Extra = [{brick_admin, {starting, {1,2,3}, foonode, self()}}],
     Extra = [{brick_admin, {running, {1,2,3}, foonode, self()}}],
     Beacon = #beacon{node = foonode, net = 'A', extra = Extra},
-    gen_udp:send(S1, BroadcastAddr, ?UDP_PORT_STATUS, term_to_binary(Beacon)),
+    ok = gen_udp:send(S1, BroadcastAddr, ?UDP_PORT_STATUS, term_to_binary(Beacon)),
     gen_udp:close(S1).
