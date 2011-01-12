@@ -44,4 +44,96 @@
          , {network_monitor_enable, false}
          , {network_monitor_monitored_nodes, []}
         ]}
+  %%
+  %% heartbeat_beacon_interval
+  %%   Heartbeat beacon interval in milliseconds. At this interval,
+  %%   UDP heartbeart signals are transmitted from the local Erlang
+  %%   node to each other Erlang node in the cluster. The heartbeats
+  %%   are sent out both through network A and through network B.
+  %%   Recommended value is between 250 and 1000 (milliseconds).
+  %%
+  %% heartbeat_failure_interval
+  %%   Heartbeat failure interval in milliseconds. A serious error has
+  %%   occurred if during this interval a heartbeat from a peer Erlang
+  %%   node has been detected on network B but no heartbeat from that
+  %%   node has been detected on network A.  The network_a_tiebreaker
+  %%   address will be pinged to determine whether or not the local
+  %%   Erlang node should be shut down to avoid (database) damage.
+  %%
+  %%   NOTE: The value of heartbeat_failure_interval should be larger
+  %%   than the value of heartbeat_warning_interval by a factor of at
+  %%   least 1.5x but preferably 2x or more.
+  %%
+  %% heartbeat_status_udp_port
+  %%   UDP port for heartbeat listener.
+  %%
+  %% heartbeat_status_xmit_udp_port
+  %%   UDP port for heartbeat transmitter. This is the base port, the
+  %%   actual port may be higher.
+  %%
+  %% heartbeat_warning_interval
+  %%   Heartbeat alarm interval in milliseconds. If this interval
+  %%   passes without the local Erlang node receiving a heartbeat
+  %%   signal from a peer Erlang node, an alert is written to the
+  %%   local application log.
+  %%
+  %% network_a_address
+  %%   IP address for the A network. This network should be physically
+  %%   separate from the B network and must be the same network used
+  %%   by the Erlang network distribution protocol (e.g. the network
+  %%   used for Mnesia replication traffic).
+  %%
+  %% network_a_broadcast_address
+  %%   IP broadcast address for the A network. This network must be
+  %%   the same network used by the Erlang network distribution
+  %%   protocol (e.g. the network used for Mnesia replication
+  %%   traffic).
+  %%
+  %% network_a_tiebreaker
+  %%   IP address for the A network to act as a tiebreaker. If the
+  %%   network monitoring application determines that the A network is
+  %%   partitioned and the B network is not partitioned, then if
+  %%   network_a_tiebreaker responds to an ICMP echo (a ping), then
+  %%   the local Erlang node is on the "correct" side of the
+  %%   partition. If the local Erlang node is not on the correct side
+  %%   of the partition (if the attempt to ping the tiebreaker address
+  %%   fails), then it shuts down immediately.
+  %%
+  %%   The network_a_tiebreaker address must be extremely reliable and
+  %%   must be as close to the local Erlang node as possible (from a
+  %%   network Layer 1 and 2 point of view) as well as close to all
+  %%   other Erlang nodes. Ideally the tiebreaker should be the
+  %%   address of the Layer 2 switch or Layer 3 router that all Erlang
+  %%   network distribution communications flow through.
+  %%
+  %% network_b_address
+  %%   IP address for the B network. This network should be physically
+  %%   separate from the A network.
+  %%
+  %% network_b_broadcast_address
+  %%   IP broadcast address for the B network. This network should be
+  %%   physically separate from the A network.
+  %%
+  %% network_monitor_enable
+  %%   Enable network partition monitoring. Options are:
+  %%
+  %%   true - Enable network partition monitoring. You can enable
+  %%   network monitoring only if you have set up two networks, A and
+  %%   B, that connect your Erlang nodes. It is recommended that A and
+  %%   B be physically separate networks. Network monitoring works by
+  %%   comparing heartbeats from network A and network B.
+  %%
+  %%   false - Disable network partition monitoring.
+  %%
+  %%   IMPORTANT: For network partition monitoring to function
+  %%   properly, these settings must be assigned identical values on
+  %%   each Erlang node:
+  %%     - network_monitor_enable
+  %%     - network_a_*
+  %%     - network_b_*
+  %%     - heartbeat_*
+  %%
+  %% network_monitor_monitored_nodes
+  %%   List of all Erlang node names for this cluster.
+  %%
  ]}.
