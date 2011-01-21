@@ -291,7 +291,7 @@ handle_info({udp, Sock, FromAddr, FromPort, Data}, State)
             NewState = process_beacon(FromAddr, FromPort, B, State),
             {noreply, NewState};
         _ ->
-            io:format("bogus beacon 2: ~P\n", [Data, 20]),
+            %% io:format("bogus beacon 2: ~P\n", [Data, 20]),
             {noreply, State}                    % Ignore it
     end;
 handle_info({check_status}, State) when State#state.monitor_p =:= true ->
@@ -393,7 +393,7 @@ beacon_loop(Sock, NetAbbr, Count, BcastAddr, EmergencyShutdownFun,
                     process_unicast_beacon(FromAddr, FromPort, B,
                                            EmergencyShutdownFun);
                 _ ->
-                    io:format("bogus beacon: ~p\n", [FromData]),
+                    %% io:format("bogus beacon: ~p\n", [FromData]),
                     ok
             end,
             timer:sleep(BeaconInterval);        % Avoid infinite A->B->A loop!
@@ -498,7 +498,7 @@ do_check_status(S) ->
     BothBad  = [N || N <- BadNetA,     lists:member(N, BadNetB)],
     OnlyABad = [N || N <- BadNetA, not lists:member(N, BadNetB)] -- BothBad,
     OnlyBBad = [N || N <- BadNetB, not lists:member(N, BadNetA)] -- BothBad,
-    %%io:format("QQQ: Both ~p, OnlyA ~p, OnlyB ~p\n", [BothBad, OnlyABad, OnlyBBad]),
+    %% io:format("QQQ: Both ~p, OnlyA ~p, OnlyB ~p\n", [BothBad, OnlyABad, OnlyBBad]),
 
     _ = clear_alarms(S#state.last_bothbad, BothBad, 'A'),
     _ = clear_alarms(S#state.last_bothbad, BothBad, 'B'),
