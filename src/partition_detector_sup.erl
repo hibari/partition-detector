@@ -71,10 +71,10 @@ init(ArgList) ->
          permanent, 2000, worker, [partition_detector_mnesia]},
 
 
-    {ok, {{one_for_one, 15, 60}, [
-                                  Detector,
-                                  Mnesia
-                                 ]}}.
+    {ok, {{one_for_one, 15, 60},
+          [ Detector ] ++
+              [ Mnesia || code:which(mnesia) =/= non_existing ]
+         }}.
 
 %%====================================================================
 %% Internal functions
