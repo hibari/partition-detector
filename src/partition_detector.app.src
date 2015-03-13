@@ -22,7 +22,7 @@
 {application, partition_detector,
  [
   {description, "Partition detector"},
-  {vsn, "0.3.0"},
+  {vsn, "0.1.11"},
   {registered, []},
   {applications, [kernel, stdlib, sasl]},
   {mod, {partition_detector, []}},
