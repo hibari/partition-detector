@@ -24,6 +24,8 @@
 -include("partition_detector.hrl").
 -include("gmt_elog.hrl").
 
+-define(TIME, gmt_time_otp18).
+
 -define(UDP_PORT_STATUS, 63099).
 -define(UDP_PORT_STATUS_XMIT, 63100).      % Actual port may be higher
 
@@ -451,7 +453,7 @@ open_a_udp_sock(PortNum, MyAddr) ->
 
 pack_beacon(Count, NetAbbr, Extra) ->
     term_to_binary(#beacon{node = node(), net = NetAbbr, count = Count,
-                           time = now(), extra = Extra}).
+                           time = ?TIME:timestamp(), extra = Extra}).
 
 unpack_beacon(B) ->
     binary_to_term(B).
@@ -462,14 +464,14 @@ process_beacon(FromAddr, FromPort, B, S) ->
     gen_event:notify(S#state.event_pid, {beacon_event, FromAddr, FromPort, B}),
     Key = {B#beacon.node, B#beacon.net},
     H = #history{node_net = Key,
-                 lastcount = B#beacon.count, lasttime = now(), beacon = B},
+                 lastcount = B#beacon.count, lasttime = ?TIME:timestamp(), beacon = B},
     NewH = [H|lists:keydelete(Key, #history.node_net, S#state.h_list)],
     S#state{h_list = NewH}.
 
 %% @spec (S::state_r()) -> state_r()
 
 do_check_status(S) ->
-    Now = now(),
+    Now = ?TIME:timestamp(),
     HeartWarnUsec = S#state.heart_warn * 1000*1000,
     CheckNet =
         fun(Net) ->
@@ -513,7 +515,7 @@ do_check_status(S) ->
             last_onlyabad = OnlyABad, last_onlybbad = OnlyBBad}.
 
 do_check_failure(S) ->
-    Now = now(),
+    Now = ?TIME:timestamp(),
     HeartFailUsec = S#state.heart_fail * 1000*1000,
     F = fun(N) ->
                 BSecs = case get_history(N, 'B',

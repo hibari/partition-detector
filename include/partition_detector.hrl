@@ -23,14 +23,14 @@
           node,                                 % Node name (atom)
           net,                                  % 'A' | 'B'
           count,                                % Counter (integer)
-          time,                                 % now()
+          time,                                 % erlang:timestamp()
           extra = []
          }).
 
 -record(history, {
           node_net,                             % {node(), 'A' | 'B'}
           lastcount,                            % int()
-          lasttime,                             % now()
+          lasttime,                             % erlang:timestamp()
           beacon                                % #beacon
          }).
 
